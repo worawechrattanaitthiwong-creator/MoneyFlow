@@ -59,11 +59,11 @@ if (worker.includes('executeVoiceTransfer') || worker.includes('MONEYFLOW_VOICE_
 if (!sw.includes('moneyflow-shell-v8')) throw new Error('PWA cache must be v8 for Thai AI platform');
 
 const build = String(pkg.scripts && pkg.scripts['build:generated'] || '');
-for (const file of ['thai-ai-platform-worker.mjs','thai-ai-product-ui.mjs','ai-platform-test.mjs']) {
+for (const file of ['thai-ai-platform-worker-safe.mjs','thai-ai-product-ui.mjs','ai-platform-test.mjs']) {
   if (!build.includes(file)) throw new Error(`Build pipeline missing ${file}`);
   await access(join(root, 'scripts', file));
 }
-if (build.indexOf('production-test.mjs') > build.indexOf('thai-ai-platform-worker.mjs')) {
+if (build.indexOf('production-test.mjs') > build.indexOf('thai-ai-platform-worker-safe.mjs')) {
   throw new Error('Legacy production test should run before Thai AI assembly');
 }
 if (build.indexOf('ai-platform-test.mjs') < build.indexOf('thai-ai-product-ui.mjs')) {
