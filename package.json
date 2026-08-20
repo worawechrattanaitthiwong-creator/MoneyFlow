@@ -1,13 +1,13 @@
 {
   "name": "moneyflow-cloudflare",
-  "version": "6.2.0-cloudflare.6",
+  "version": "6.2.0-cloudflare.7",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "build:generated": "node scripts/build-generated.mjs && node scripts/accounting-health.mjs && node scripts/enhance-generated.mjs && node scripts/mobile-install-fallback.mjs && node scripts/fix-savings-pin.mjs && node scripts/production-polish.mjs && node scripts/production-runtime-fix.mjs && node scripts/help-tooltips.mjs && node scripts/voice-entry.mjs && node scripts/voice-account-routing.mjs && node scripts/latest-transactions-first.mjs && node scripts/swipe-delete.mjs && node scripts/voice-finance-commands.mjs && node scripts/voice-microphone-policy.mjs && node scripts/smoke-test.mjs && node scripts/production-test.mjs",
+    "build:generated": "node scripts/build-generated.mjs && node scripts/accounting-health.mjs && node scripts/enhance-generated.mjs && node scripts/mobile-install-fallback.mjs && node scripts/fix-savings-pin.mjs && node scripts/production-polish.mjs && node scripts/production-runtime-fix.mjs && node scripts/help-tooltips.mjs && node scripts/voice-entry.mjs && node scripts/voice-account-routing.mjs && node scripts/latest-transactions-first.mjs && node scripts/swipe-delete.mjs && node scripts/voice-finance-commands.mjs && node scripts/voice-microphone-policy.mjs && node scripts/smoke-test.mjs && node scripts/production-test.mjs && node scripts/thai-ai-platform-worker.mjs && node scripts/thai-ai-product-ui.mjs && node scripts/ai-platform-test.mjs",
     "dev": "npm run build:generated && wrangler dev",
     "deploy": "npm run build:generated && wrangler deploy",
     "test:legacy": "npm run build:generated",
