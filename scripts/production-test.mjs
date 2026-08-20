@@ -14,6 +14,7 @@ const requiredHtml = [
   'MONEYFLOW_RUNTIME_FIX_V1',
   'MONEYFLOW_PIN_INSTANT_V1',
   'MONEYFLOW_HELP_V1',
+  'MONEYFLOW_VOICE_ENTRY_V1',
   '__moneyflowRpcTransport',
   '__moneyflowFlushQueue',
   'mfAccountingHealth',
@@ -26,6 +27,10 @@ const requiredHtml = [
   'budget.item',
   'goals.item',
   'report.networth',
+  'mfVoiceButton',
+  '__moneyflowParseVoiceText',
+  'webkitSpeechRecognition',
+  'กดค้างเพื่อพูด',
   'แตะเพื่อดูยอด'
 ];
 for (const marker of requiredHtml) {
