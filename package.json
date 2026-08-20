@@ -4,9 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "test:legacy": "node scripts/smoke-test.mjs",
+    "build:generated": "node scripts/build-generated.mjs",
+    "postinstall": "npm run build:generated",
+    "dev": "npm run build:generated && wrangler dev",
+    "deploy": "npm run build:generated && wrangler deploy",
+    "test:legacy": "npm run build:generated && node scripts/smoke-test.mjs",
     "db:migrate:local": "wrangler d1 migrations apply moneyflow-db --local",
     "db:migrate": "wrangler d1 migrations apply moneyflow-db --remote"
   },
