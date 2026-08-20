@@ -19,7 +19,7 @@ if (!html.includes('MONEYFLOW_VOICE_SCOPE_LOCK_V1')) {
 <script>
 /* MONEYFLOW_VOICE_SCOPE_LOCK_V1 */
 (function(){
-  const BLOCK_ACTION_RE=/(?:^|\\s)(?:โอน|ย้ายเงิน|โยกเงิน|ส่งเงิน|ลบ|ลบทิ้ง|เอาออก|ใช้หนี้|จ่ายหนี้|ชำระหนี้|โปะหนี้|คืนหนี้)(?:\\s|$)/i;
+  const BLOCK_ACTION_RE=/(?:โอน|ย้ายเงิน|โยกเงิน|ส่งเงิน|ลบ|ลบทิ้ง|เอาออก|ใช้หนี้|จ่ายหนี้|ชำระหนี้|โปะหนี้|คืนหนี้)/i;
   const BLOCK_DOMAIN_RE=/(?:หุ้น|ลงทุน|กองทุน|เงินเก็บ|เงินออม|ออมทรัพย์|หนี้|บัตรเครดิต|สินเชื่อ|ผ่อนหนี้)/i;
   const BANK_RE=/(?:กสิกร|kbank|k plus|ไทยพาณิชย์|scb|กรุงไทย|krungthai|next|ธนาคารกรุงเทพ|bangkok bank|bualuang|กรุงศรี|krungsri|ttb|ทีทีบี|ทหารไทย|ออมสิน|gsb)/i;
   const ALLOWED_ACCOUNT_RE=/(?:เงินใช้ประจำวัน|ใช้จ่ายประจำวัน|กระเป๋าใช้|daily wallet|บัญชีเงินเดือน|กระเป๋าเงินเดือน|salary account)/i;
