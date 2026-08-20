@@ -99,6 +99,7 @@ const RPC_SHEET_PLANS = Object.freeze({
   getSavingsAccountDetail: [...FINANCE_SHEETS, 'Accounts', 'AccountLedger'],
   getSavingsSecurityStatus: [...AUTH_SHEETS, 'SavingsSecurity'],
   getSecurityCenterData: [...FINANCE_SHEETS, 'SavingsSecurity'],
+  getAccountingHealth: [...AUTH_SHEETS, 'Transactions', 'Accounts', 'AccountLedger', 'DailyWalletLedger'],
   exportTransactionsCsv: [...FINANCE_SHEETS, 'Transactions']
 });
 
@@ -202,7 +203,7 @@ export default {
 
     if (url.pathname === '/health') {
       response = request.method === 'GET'
-        ? json({ ok: true, app: 'MoneyFlow', version: '6.2-cloudflare.3' })
+        ? json({ ok: true, app: 'MoneyFlow', version: '6.2-cloudflare.4' })
         : json({ ok: false, error: { message: 'Method not allowed' } }, 405);
     } else if (url.pathname === '/api/rpc') {
       if (request.method !== 'POST') {
