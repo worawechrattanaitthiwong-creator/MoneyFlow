@@ -6,11 +6,13 @@ import vm from 'node:vm';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const html = await readFile(join(root, 'public', 'index.html'), 'utf8');
 const core = await readFile(join(root, 'src', 'legacy-core.js'), 'utf8');
+const worker = await readFile(join(root, 'src', 'index.js'), 'utf8');
 const store = await readFile(join(root, 'src', 'store.js'), 'utf8');
 
 const requiredHtml = [
   'MONEYFLOW_PRODUCTION_POLISH_V1',
   'MONEYFLOW_RUNTIME_FIX_V1',
+  'MONEYFLOW_PIN_INSTANT_V1',
   '__moneyflowRpcTransport',
   '__moneyflowFlushQueue',
   'mfAccountingHealth',
@@ -24,6 +26,9 @@ for (const marker of requiredHtml) {
 }
 for (const marker of ['MONEYFLOW_ACCOUNTING_HEALTH_V1', 'getAccountingHealth']) {
   if (!core.includes(marker)) throw new Error(`accounting health marker missing: ${marker}`);
+}
+for (const marker of ["version: '6.2-cloudflare.4'", 'getAccountingHealth:']) {
+  if (!worker.includes(marker)) throw new Error(`worker production marker missing: ${marker}`);
 }
 for (const marker of ['ensureOptimizationSchema', 'mf_transactions_native', 'idx_mf_rows_sheet_user_date']) {
   if (!store.includes(marker)) throw new Error(`D1 optimization marker missing: ${marker}`);
