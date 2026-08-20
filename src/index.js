@@ -77,6 +77,36 @@ async function serveReceipt(env, key) {
   return new Response(object.body, { headers });
 }
 
+const AUTH_SHEETS = ['Users', 'Sessions', 'DailyWallet'];
+const FINANCE_SHEETS = [...AUTH_SHEETS, 'FinanceSettings', 'CurrencyRates'];
+const RPC_SHEET_PLANS = Object.freeze({
+  login: ['Users', 'Sessions', 'DailyWallet'],
+  getInstantSessionData: AUTH_SHEETS,
+  getCurrentUser: ['Users', 'Sessions'],
+  getDailyWallet: AUTH_SHEETS,
+  getCategories: [...AUTH_SHEETS, 'Categories'],
+  getDashboard: [...FINANCE_SHEETS, 'Transactions', 'Accounts'],
+  getSavingsOverview: [...FINANCE_SHEETS, 'Accounts'],
+  getTransactions: [...FINANCE_SHEETS, 'Transactions'],
+  getBudgets: [...FINANCE_SHEETS, 'Transactions', 'Budgets'],
+  getGoals: [...AUTH_SHEETS, 'Accounts', 'Goals'],
+  getCurrencyRates: FINANCE_SHEETS,
+  getFinanceSettings: FINANCE_SHEETS,
+  getCalendarData: [...FINANCE_SHEETS, 'Transactions', 'Recurring'],
+  getReportData: [...FINANCE_SHEETS, 'Transactions', 'Accounts', 'Budgets', 'NetWorthSnapshots'],
+  createReportPdf: [...FINANCE_SHEETS, 'Transactions', 'Accounts', 'Budgets', 'NetWorthSnapshots'],
+  getFastBootData: [...FINANCE_SHEETS, 'Transactions', 'Accounts', 'Categories', 'SavingsSecurity'],
+  getSavingsAccountDetail: [...FINANCE_SHEETS, 'Accounts', 'AccountLedger'],
+  getSavingsSecurityStatus: [...AUTH_SHEETS, 'SavingsSecurity'],
+  getSecurityCenterData: [...FINANCE_SHEETS, 'SavingsSecurity'],
+  exportTransactionsCsv: [...FINANCE_SHEETS, 'Transactions']
+});
+
+function sheetsForRpc(method) {
+  const plan = RPC_SHEET_PLANS[String(method || '')];
+  return Array.isArray(plan) ? plan : null;
+}
+
 async function handleRpc(request, env) {
   const contentType = String(request.headers.get('content-type') || '').toLowerCase();
   if (!contentType.includes('application/json')) {
@@ -104,7 +134,7 @@ async function handleRpc(request, env) {
 
   let ctx;
   try {
-    ctx = await D1SheetContext.load(env.DB);
+    ctx = await D1SheetContext.load(env.DB, sheetsForRpc(method));
   } catch (e) {
     return rpcError(new Error('ฐานข้อมูลยังไม่พร้อม กรุณารัน D1 migration ก่อน deploy: ' + (e.message || e)), 503);
   }
@@ -118,7 +148,6 @@ async function handleRpc(request, env) {
     await ensureInitialized(ctx);
     if (method === 'uploadReceipt') {
       const token = args[0], payload = args[1];
-      // Authenticate synchronously while the legacy runtime context is active.
       const user = legacyRpc.getCurrentUser(token);
       special = { type: 'receipt', token, payload, userId: user.id };
     } else if (method === 'createReportPdf') {
@@ -140,7 +169,6 @@ async function handleRpc(request, env) {
 
   try {
     if (special && special.type === 'receipt') {
-      // Auth was already checked above; call storage directly without touching legacy state again.
       if (!env.RECEIPTS) throw new Error('ยังไม่ได้ผูก R2 bucket ชื่อ RECEIPTS');
       const payload = special.payload || {};
       const bytes = bytesFromBase64(payload.base64);
@@ -174,7 +202,7 @@ export default {
 
     if (url.pathname === '/health') {
       response = request.method === 'GET'
-        ? json({ ok: true, app: 'MoneyFlow', version: '6.2-cloudflare.2' })
+        ? json({ ok: true, app: 'MoneyFlow', version: '6.2-cloudflare.3' })
         : json({ ok: false, error: { message: 'Method not allowed' } }, 405);
     } else if (url.pathname === '/api/rpc') {
       if (request.method !== 'POST') {
