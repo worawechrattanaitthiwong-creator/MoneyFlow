@@ -1,15 +1,16 @@
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { gunzipSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-async function joinParts(folder) {
-  const dir = join(root, 'source-parts', folder);
-  const names = (await readdir(dir)).filter((name) => name.endsWith('.txt')).sort();
-  let out = '';
-  for (const name of names) out += await readFile(join(dir, name), 'utf8');
-  return out;
+async function readBundledSource(folder) {
+  const dir = join(root, 'source-bundles', folder);
+  const names = (await readdir(dir)).filter((name) => name.endsWith('.b64')).sort();
+  let base64 = '';
+  for (const name of names) base64 += await readFile(join(dir, name), 'utf8');
+  return gunzipSync(Buffer.from(base64, 'base64')).toString('utf8');
 }
 
 function makeLegacyCore(code) {
@@ -45,8 +46,8 @@ function makePublicIndex(indexHtml) {
   return indexHtml.replace('</head>', shim + '\n</head>');
 }
 
-const code = await joinParts('code');
-const index = await joinParts('index');
+const code = await readBundledSource('code');
+const index = await readBundledSource('index');
 
 await mkdir(join(root, 'legacy'), { recursive: true });
 await mkdir(join(root, 'src'), { recursive: true });
@@ -57,4 +58,4 @@ await writeFile(join(root, 'legacy', 'Index.html'), index);
 await writeFile(join(root, 'src', 'legacy-core.js'), makeLegacyCore(code));
 await writeFile(join(root, 'public', 'index.html'), makePublicIndex(index));
 
-console.log('Generated legacy/Code.gs, legacy/Index.html, src/legacy-core.js, public/index.html');
+console.log('Generated exact legacy sources and Cloudflare runtime files');
