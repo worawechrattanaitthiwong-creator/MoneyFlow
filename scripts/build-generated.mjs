@@ -21,6 +21,7 @@ function addCloudflareDataCompatibility(code) {
    - Include DailyWallet + DailyWalletLedger in backup/restore.
    - Restore all imported rows under the currently authenticated user.
    - Upsert the one-row DailyWallet instead of creating duplicates.
+   - De-duplicate seeded Categories, CurrencyRates and same-day snapshots.
    ============================================================ */
 function exportBackupJson(token){
   const user=authenticate_(token);ensureV6User_(user);ensureNetWorthSheet_();ensureDailyWalletSheets_();const userId=String(user.id);
@@ -35,7 +36,7 @@ function restoreBackupJson(token,jsonText){
   try{backup=JSON.parse(String(jsonText||''));}catch(e){throw new Error('ไฟล์ Backup JSON ไม่ถูกต้อง');}
   if(!backup||!backup.data)throw new Error('รูปแบบ Backup ไม่ถูกต้อง');
   const userId=String(user.id);let restored=0;
-  const idSheets=[APP.SHEETS.CATEGORIES,APP.SHEETS.BUDGETS,APP.SHEETS.GOALS,APP.SHEETS.ACCOUNTS,APP.SHEETS.ACCOUNT_LEDGER,APP.SHEETS.TRANSACTIONS,APP.SHEETS.RECURRING,APP.SHEETS.CURRENCY_RATES,APP.SHEETS.NET_WORTH_SNAPSHOTS,V63_DAILY_LEDGER_SHEET];
+  const idSheets=[APP.SHEETS.BUDGETS,APP.SHEETS.GOALS,APP.SHEETS.ACCOUNTS,APP.SHEETS.ACCOUNT_LEDGER,APP.SHEETS.TRANSACTIONS,APP.SHEETS.RECURRING,V63_DAILY_LEDGER_SHEET];
   withLock_(function(){
     idSheets.forEach(function(name){
       const incoming=Array.isArray(backup.data[name])?backup.data[name]:[],existing=getRows_(name),ids={};
@@ -45,6 +46,40 @@ function restoreBackupJson(token,jsonText){
         if(row.id&&ids[String(row.id)])return;
         appendObject_(name,row);if(row.id)ids[String(row.id)]=true;restored++;
       });
+    });
+
+    const categoryIncoming=Array.isArray(backup.data[APP.SHEETS.CATEGORIES])?backup.data[APP.SHEETS.CATEGORIES]:[];
+    const categoryRows=getRows_(APP.SHEETS.CATEGORIES).filter(function(r){return String(r.userId)===userId;});
+    const categoryByKey={};categoryRows.forEach(function(r){categoryByKey[String(r.type||'')+'|'+String(r.name||'').trim()]=r;});
+    categoryIncoming.forEach(function(r){
+      const row=Object.assign({},r,{userId:user.id});delete row._row;
+      const key=String(row.type||'')+'|'+String(row.name||'').trim(),current=categoryByKey[key];
+      if(current){
+        updateObject_(APP.SHEETS.CATEGORIES,current._row,{icon:row.icon||current.icon,updatedAt:row.updatedAt||current.updatedAt||now_()});
+      }else{
+        appendObject_(APP.SHEETS.CATEGORIES,row);categoryByKey[key]=row;
+      }
+      restored++;
+    });
+
+    const rateIncoming=Array.isArray(backup.data[APP.SHEETS.CURRENCY_RATES])?backup.data[APP.SHEETS.CURRENCY_RATES]:[];
+    const rateRows=getRows_(APP.SHEETS.CURRENCY_RATES).filter(function(r){return String(r.userId)===userId;});
+    const rateByCurrency={};rateRows.forEach(function(r){rateByCurrency[String(r.currency||'').toUpperCase()]=r;});
+    rateIncoming.forEach(function(r){
+      const row=Object.assign({},r,{userId:user.id});delete row._row;
+      const key=String(row.currency||'').toUpperCase(),current=rateByCurrency[key];
+      if(current)updateObject_(APP.SHEETS.CURRENCY_RATES,current._row,row);else appendObject_(APP.SHEETS.CURRENCY_RATES,row);
+      restored++;
+    });
+
+    const snapshotIncoming=Array.isArray(backup.data[APP.SHEETS.NET_WORTH_SNAPSHOTS])?backup.data[APP.SHEETS.NET_WORTH_SNAPSHOTS]:[];
+    const snapshotRows=getRows_(APP.SHEETS.NET_WORTH_SNAPSHOTS).filter(function(r){return String(r.userId)===userId;});
+    const snapshotByDate={};snapshotRows.forEach(function(r){snapshotByDate[String(r.date||'')]=r;});
+    snapshotIncoming.forEach(function(r){
+      const row=Object.assign({},r,{userId:user.id});delete row._row;
+      const key=String(row.date||''),current=snapshotByDate[key];
+      if(current)updateObject_(APP.SHEETS.NET_WORTH_SNAPSHOTS,current._row,row);else appendObject_(APP.SHEETS.NET_WORTH_SNAPSHOTS,row);
+      restored++;
     });
 
     const settingsIncoming=Array.isArray(backup.data[APP.SHEETS.FINANCE_SETTINGS])?backup.data[APP.SHEETS.FINANCE_SETTINGS]:[];
