@@ -1,6 +1,14 @@
 node_modules/
 .wrangler/
 .dev.vars
+.dev.vars.*
 .env
+.env.*
 .DS_Store
 *.log
+*.sqlite
+*.sqlite3
+*.db
+/backups/
+MoneyFlow_Backup_*.json
+MoneyFlow - *.csv
