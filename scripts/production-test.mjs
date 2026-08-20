@@ -17,6 +17,7 @@ const requiredHtml = [
   'MONEYFLOW_HELP_V1',
   'MONEYFLOW_VOICE_ENTRY_V1',
   'MONEYFLOW_LATEST_FIRST_V1',
+  'MONEYFLOW_SWIPE_DELETE_V1',
   '__moneyflowRpcTransport',
   '__moneyflowFlushQueue',
   '__moneyflowSortTransactionsLatest',
@@ -33,11 +34,19 @@ const requiredHtml = [
   'mfVoiceButton',
   '__moneyflowParseVoiceText',
   'webkitSpeechRecognition',
+  'mfSwipeDeleteHint',
+  'SWIPE_THRESHOLD=84',
+  'requestAnimationFrame(()=>window.removeTransaction(current.id))',
+  '.deleteTransaction(TOKEN,id)',
   'กดค้างเพื่อพูด',
+  'ปล่อยเพื่อลบ',
   'แตะเพื่อดูยอด'
 ];
 for (const marker of requiredHtml) {
   if (!html.includes(marker)) throw new Error(`production polish marker missing: ${marker}`);
+}
+if (html.lastIndexOf('MONEYFLOW_SWIPE_DELETE_V1') < html.lastIndexOf('MONEYFLOW_PRODUCTION_POLISH_V1')) {
+  throw new Error('swipe delete runtime must load after legacy undo-delete runtime');
 }
 for (const marker of ['MONEYFLOW_ACCOUNTING_HEALTH_V1', 'getAccountingHealth']) {
   if (!core.includes(marker)) throw new Error(`accounting health marker missing: ${marker}`);
@@ -48,7 +57,7 @@ for (const marker of ["version: '6.2-cloudflare.4'", 'getAccountingHealth:']) {
 for (const marker of ['ensureOptimizationSchema', 'mf_transactions_native', 'idx_mf_rows_sheet_user_date']) {
   if (!store.includes(marker)) throw new Error(`D1 optimization marker missing: ${marker}`);
 }
-if (!sw.includes('moneyflow-shell-v3')) throw new Error('PWA cache version was not bumped for latest-first UI');
+if (!sw.includes('moneyflow-shell-v4')) throw new Error('PWA cache version was not bumped for swipe-delete UI');
 
 for (const file of ['manifest.webmanifest', 'sw.js', 'offline.html', 'icons/icon-192.png', 'icons/icon-512.png']) {
   await access(join(root, 'public', file));
