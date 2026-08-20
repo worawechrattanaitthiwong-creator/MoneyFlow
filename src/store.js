@@ -104,10 +104,31 @@ export class MemorySpreadsheet {
   }
 }
 
+let OPTIMIZATION_SCHEMA_READY = false;
+
+async function ensureOptimizationSchema(db) {
+  if (OPTIMIZATION_SCHEMA_READY) return;
+  try {
+    await db.batch([
+      db.prepare("CREATE INDEX IF NOT EXISTS idx_mf_rows_sheet_user ON mf_sheet_rows(sheet_name, json_extract(data,'$.userId'))"),
+      db.prepare("CREATE INDEX IF NOT EXISTS idx_mf_rows_sheet_user_date ON mf_sheet_rows(sheet_name, json_extract(data,'$.userId'), json_extract(data,'$.date'))"),
+      db.prepare("CREATE INDEX IF NOT EXISTS idx_mf_rows_sheet_user_id ON mf_sheet_rows(sheet_name, json_extract(data,'$.userId'), json_extract(data,'$.id'))"),
+      db.prepare("CREATE INDEX IF NOT EXISTS idx_mf_rows_sheet_account ON mf_sheet_rows(sheet_name, json_extract(data,'$.userId'), json_extract(data,'$.accountId'))"),
+      db.prepare("CREATE VIEW IF NOT EXISTS mf_transactions_native AS SELECT row_id, sort_key, json_extract(data,'$.id') AS id, json_extract(data,'$.userId') AS user_id, json_extract(data,'$.date') AS date, json_extract(data,'$.type') AS type, CAST(json_extract(data,'$.amount') AS REAL) AS amount, json_extract(data,'$.accountId') AS account_id, json_extract(data,'$.toAccountId') AS to_account_id, data FROM mf_sheet_rows WHERE sheet_name='Transactions'"),
+      db.prepare("CREATE VIEW IF NOT EXISTS mf_accounts_native AS SELECT row_id, sort_key, json_extract(data,'$.id') AS id, json_extract(data,'$.userId') AS user_id, json_extract(data,'$.name') AS name, json_extract(data,'$.type') AS type, CAST(json_extract(data,'$.balance') AS REAL) AS balance, json_extract(data,'$.currency') AS currency, data FROM mf_sheet_rows WHERE sheet_name='Accounts'")
+    ]);
+  } catch (error) {
+    console.warn('MoneyFlow D1 optimization schema was not applied; continuing with compatibility storage', error);
+  } finally {
+    OPTIMIZATION_SCHEMA_READY = true;
+  }
+}
+
 export class D1SheetContext {
   constructor(db, spreadsheet) { this.db = db; this.spreadsheet = spreadsheet; }
 
   static async load(db, sheetNames = null) {
+    await ensureOptimizationSchema(db);
     const metaResult = await db.prepare('SELECT sheet_name, headers FROM mf_sheet_meta ORDER BY sheet_name').all();
     let rowResult;
     if (Array.isArray(sheetNames) && sheetNames.length) {
