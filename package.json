@@ -1,13 +1,13 @@
 {
   "name": "moneyflow-cloudflare",
-  "version": "6.2.0-cloudflare.2",
+  "version": "6.2.0-cloudflare.3",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "build:generated": "node scripts/build-generated.mjs && node scripts/smoke-test.mjs",
+    "build:generated": "node scripts/build-generated.mjs && node scripts/enhance-generated.mjs && node scripts/smoke-test.mjs",
     "dev": "npm run build:generated && wrangler dev",
     "deploy": "npm run build:generated && wrangler deploy",
     "test:legacy": "npm run build:generated",
