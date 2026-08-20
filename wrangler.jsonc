@@ -14,14 +14,8 @@
     {
       "binding": "DB",
       "database_name": "moneyflow-db",
-      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "database_id": "603b51f3-85f7-47a4-98e5-6804641002ab",
       "migrations_dir": "migrations"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "RECEIPTS",
-      "bucket_name": "moneyflow-receipts"
     }
   ]
 }
