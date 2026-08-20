@@ -13,12 +13,19 @@ const requiredHtml = [
   'MONEYFLOW_PRODUCTION_POLISH_V1',
   'MONEYFLOW_RUNTIME_FIX_V1',
   'MONEYFLOW_PIN_INSTANT_V1',
+  'MONEYFLOW_HELP_V1',
   '__moneyflowRpcTransport',
   '__moneyflowFlushQueue',
   'mfAccountingHealth',
   'MF_PENDING_DETAIL_ID',
   'mfUndoBar',
   'mf-sync-pill',
+  'mfInfoOverlay',
+  'openMoneyFlowInfo',
+  'dashboard.networth',
+  'budget.item',
+  'goals.item',
+  'report.networth',
   'แตะเพื่อดูยอด'
 ];
 for (const marker of requiredHtml) {
