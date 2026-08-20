@@ -13,6 +13,60 @@ async function readBundledSource(folder) {
   return gunzipSync(Buffer.from(base64, 'base64')).toString('utf8');
 }
 
+function addCloudflareDataCompatibility(code) {
+  const patch = `
+
+/* ============================================================
+   CLOUDFLARE DATA COMPATIBILITY PATCH
+   - Include DailyWallet + DailyWalletLedger in backup/restore.
+   - Restore all imported rows under the currently authenticated user.
+   - Upsert the one-row DailyWallet instead of creating duplicates.
+   ============================================================ */
+function exportBackupJson(token){
+  const user=authenticate_(token);ensureV6User_(user);ensureNetWorthSheet_();ensureDailyWalletSheets_();const userId=String(user.id);
+  const names=[APP.SHEETS.TRANSACTIONS,APP.SHEETS.CATEGORIES,APP.SHEETS.BUDGETS,APP.SHEETS.GOALS,APP.SHEETS.ACCOUNTS,APP.SHEETS.ACCOUNT_LEDGER,APP.SHEETS.RECURRING,APP.SHEETS.CURRENCY_RATES,APP.SHEETS.FINANCE_SETTINGS,APP.SHEETS.NET_WORTH_SNAPSHOTS,V63_DAILY_WALLET_SHEET,V63_DAILY_LEDGER_SHEET];
+  const out={version:'6.2.0',exportedAt:now_(),user:sanitizeUser_(user),data:{}};
+  names.forEach(function(name){out.data[name]=getRows_(name).filter(function(r){return String(r.userId)===userId;}).map(stripRow_);});
+  return JSON.stringify(out,null,2);
+}
+
+function restoreBackupJson(token,jsonText){
+  const user=authenticate_(token);ensureV6User_(user);ensureNetWorthSheet_();ensureDailyWalletSheets_();let backup;
+  try{backup=JSON.parse(String(jsonText||''));}catch(e){throw new Error('ไฟล์ Backup JSON ไม่ถูกต้อง');}
+  if(!backup||!backup.data)throw new Error('รูปแบบ Backup ไม่ถูกต้อง');
+  const userId=String(user.id);let restored=0;
+  const idSheets=[APP.SHEETS.CATEGORIES,APP.SHEETS.BUDGETS,APP.SHEETS.GOALS,APP.SHEETS.ACCOUNTS,APP.SHEETS.ACCOUNT_LEDGER,APP.SHEETS.TRANSACTIONS,APP.SHEETS.RECURRING,APP.SHEETS.CURRENCY_RATES,APP.SHEETS.NET_WORTH_SNAPSHOTS,V63_DAILY_LEDGER_SHEET];
+  withLock_(function(){
+    idSheets.forEach(function(name){
+      const incoming=Array.isArray(backup.data[name])?backup.data[name]:[],existing=getRows_(name),ids={};
+      existing.filter(function(r){return String(r.userId)===userId;}).forEach(function(r){if(r.id)ids[String(r.id)]=true;});
+      incoming.forEach(function(r){
+        const row=Object.assign({},r,{userId:user.id});delete row._row;
+        if(row.id&&ids[String(row.id)])return;
+        appendObject_(name,row);if(row.id)ids[String(row.id)]=true;restored++;
+      });
+    });
+
+    const settingsIncoming=Array.isArray(backup.data[APP.SHEETS.FINANCE_SETTINGS])?backup.data[APP.SHEETS.FINANCE_SETTINGS]:[];
+    if(settingsIncoming.length){
+      const incoming=Object.assign({},settingsIncoming[0],{userId:user.id});delete incoming._row;
+      const current=getRows_(APP.SHEETS.FINANCE_SETTINGS).find(function(r){return String(r.userId)===userId;});
+      if(current)updateObject_(APP.SHEETS.FINANCE_SETTINGS,current._row,incoming);else appendObject_(APP.SHEETS.FINANCE_SETTINGS,incoming);restored++;
+    }
+
+    const walletIncoming=Array.isArray(backup.data[V63_DAILY_WALLET_SHEET])?backup.data[V63_DAILY_WALLET_SHEET]:[];
+    if(walletIncoming.length){
+      const incoming=Object.assign({},walletIncoming[0],{userId:user.id});delete incoming._row;
+      const current=getRows_(V63_DAILY_WALLET_SHEET).find(function(r){return String(r.userId)===userId;});
+      if(current)updateObject_(V63_DAILY_WALLET_SHEET,current._row,incoming);else appendObject_(V63_DAILY_WALLET_SHEET,incoming);restored++;
+    }
+  });
+  ensureDefaultAccount_(user);SpreadsheetApp.flush();return {success:true,restored:restored,version:backup.version||'unknown'};
+}
+`;
+  return code.trimEnd() + patch;
+}
+
 function makeLegacyCore(code) {
   const matches = [...code.matchAll(/^function\s+([A-Za-z_$][\w$]*)\s*\(/gm)];
   const totals = new Map();
@@ -46,7 +100,8 @@ function makePublicIndex(indexHtml) {
   return indexHtml.replace('</head>', shim + '\n</head>');
 }
 
-const code = await readBundledSource('code');
+const originalCode = await readBundledSource('code');
+const code = addCloudflareDataCompatibility(originalCode);
 const index = await readBundledSource('index');
 
 await mkdir(join(root, 'legacy'), { recursive: true });
@@ -58,4 +113,4 @@ await writeFile(join(root, 'legacy', 'Index.html'), index);
 await writeFile(join(root, 'src', 'legacy-core.js'), makeLegacyCore(code));
 await writeFile(join(root, 'public', 'index.html'), makePublicIndex(index));
 
-console.log('Generated exact legacy sources and Cloudflare runtime files');
+console.log('Generated legacy sources with Cloudflare data compatibility patches');
