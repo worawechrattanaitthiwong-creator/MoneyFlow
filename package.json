@@ -1,22 +1,24 @@
 {
   "name": "moneyflow-cloudflare",
-  "version": "6.2.0-cloudflare.1",
+  "version": "6.2.0-cloudflare.2",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "build:generated": "node scripts/build-generated.mjs",
-    "postinstall": "npm run build:generated",
+    "build:generated": "node scripts/build-generated.mjs && node scripts/smoke-test.mjs",
     "dev": "npm run build:generated && wrangler dev",
     "deploy": "npm run build:generated && wrangler deploy",
-    "test:legacy": "npm run build:generated && node scripts/smoke-test.mjs",
+    "test:legacy": "npm run build:generated",
     "db:migrate:local": "wrangler d1 migrations apply moneyflow-db --local",
     "db:migrate": "wrangler d1 migrations apply moneyflow-db --remote"
   },
   "dependencies": {
-    "@pdf-lib/fontkit": "^1.1.1",
-    "pdf-lib": "^1.17.1"
+    "@pdf-lib/fontkit": "1.1.1",
+    "pdf-lib": "1.17.1"
   },
   "devDependencies": {
-    "wrangler": "^4.20.0"
+    "wrangler": "4.20.0"
   }
 }
