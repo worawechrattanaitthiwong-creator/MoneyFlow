@@ -13,7 +13,7 @@ if (!html.includes('MONEYFLOW_VOICE_ACCOUNT_ROUTING_V2')) {
 (function(){
   const SALARY_KEY='moneyflow_voice_salary_account_v1';
   const SALARY_RE=/(เงินเดือน|salary|payroll|ค่าจ้าง)/i;
-  const SALARY_ACCOUNT_RE=/(บัญชีเงินเดือน|กระเป๋าเงินเดือน|salary account)/i;
+  const SALARY_ACCOUNT_RE=/(บัญชีเงินเดือน|กระเป๋าเงินเดือน|salary account|(?:จาก|หักจาก|ตัดจาก|ด้วย)\\s*(?:บัญชี|กระเป๋า)?\\s*เงินเดือน)/i;
   const DAILY='daily_wallet';
 
   function remember(id){id=String(id||'');if(!id||id===DAILY)return;try{localStorage.setItem(SALARY_KEY,id)}catch(e){}}
@@ -34,12 +34,12 @@ if (!html.includes('MONEYFLOW_VOICE_ACCOUNT_ROUTING_V2')) {
   }
   function historicalSalaryAccount(){
     try{
-      const rows=[window.CURRENT_TRANSACTIONS,window.CACHE&&CACHE.transactions].find(Array.isArray)||[];
-      for(let i=rows.length-1;i>=0;i--){
-        const row=rows[i]||{};
-        const type=String(row.type||'').toLowerCase();
-        const text=[row.category,row.description,row.note].filter(Boolean).join(' ');
-        const id=String(row.accountId||row.account_id||'');
+      let rows=[window.CURRENT_TRANSACTIONS,window.CACHE&&CACHE.transactions].find(Array.isArray)||[];
+      if(typeof window.__moneyflowSortTransactionsLatest==='function')rows=window.__moneyflowSortTransactionsLatest(rows.slice());
+      for(const row of rows){
+        const type=String(row?.type||'').toLowerCase();
+        const text=[row?.category,row?.description,row?.note].filter(Boolean).join(' ');
+        const id=String(row?.accountId||row?.account_id||'');
         if(type==='income'&&SALARY_RE.test(text)&&id&&id!==DAILY)return id;
       }
     }catch(e){}
