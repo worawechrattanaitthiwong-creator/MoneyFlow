@@ -4,19 +4,18 @@ import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const indexPath = join(root, 'public', 'index.html');
-const swPath = join(root, 'public', 'sw.js');
 let html = await readFile(indexPath, 'utf8');
 
-if (!html.includes('MONEYFLOW_VOICE_ACCOUNT_ROUTING_V1')) {
+if (!html.includes('MONEYFLOW_VOICE_ACCOUNT_ROUTING_V2')) {
   const runtime = `
 <script>
-/* MONEYFLOW_VOICE_ACCOUNT_ROUTING_V1 */
+/* MONEYFLOW_VOICE_ACCOUNT_ROUTING_V2 */
 (function(){
   const SALARY_KEY='moneyflow_voice_salary_account_v1';
   const SALARY_RE=/(เงินเดือน|salary|payroll|ค่าจ้าง)/i;
+  const SALARY_ACCOUNT_RE=/(บัญชีเงินเดือน|กระเป๋าเงินเดือน|salary account)/i;
   const DAILY='daily_wallet';
 
-  function safeJson(value,fallback){try{return JSON.parse(value)}catch(e){return fallback}}
   function remember(id){id=String(id||'');if(!id||id===DAILY)return;try{localStorage.setItem(SALARY_KEY,id)}catch(e){}}
   function remembered(){try{return String(localStorage.getItem(SALARY_KEY)||'')}catch(e){return ''}}
   function accountText(row){return [row?.name,row?.accountName,row?.label,row?.nickname,row?.bankName,row?.purpose,row?.type].filter(Boolean).join(' ').toLowerCase()}
@@ -53,7 +52,6 @@ if (!html.includes('MONEYFLOW_VOICE_ACCOUNT_ROUTING_V1')) {
       if(/เงินเดือน/.test(t))score+=8;
       if(/salary|payroll/i.test(t))score+=8;
       if(/รับเงินเดือน/.test(t))score+=6;
-      if(c.row&&c.row.isDefault===true)score+=1;
       return {id:c.id,score};
     }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
     if(!scored.length)return '';
@@ -70,33 +68,35 @@ if (!html.includes('MONEYFLOW_VOICE_ACCOUNT_ROUTING_V1')) {
     const named=salaryNamedAccount(candidates);if(named){remember(named);return named}
     return '';
   }
-  function isSalaryPayload(payload){
-    if(!payload||String(payload.type||'').toLowerCase()!=='income')return false;
-    return SALARY_RE.test([payload.category,payload.description,payload.note].filter(Boolean).join(' '));
+  function voiceWantsSalary(text,payload){
+    const raw=String(text||'');
+    if(SALARY_ACCOUNT_RE.test(raw))return true;
+    const type=String(payload?.type||'').toLowerCase();
+    if(type!=='income')return false;
+    return SALARY_RE.test([raw,payload?.category,payload?.description,payload?.note].filter(Boolean).join(' '));
   }
 
   window.__moneyflowResolveSalaryAccount=resolveSalaryAccount;
   const previous=window.__moneyflowRpcTransport;
-  if(typeof previous==='function'&&!previous.__moneyflowVoiceAccountRouting){
+  if(typeof previous==='function'&&!previous.__moneyflowVoiceAccountRoutingV2){
     const wrapped=async function(method,args){
       const m=String(method||'');
       let nextArgs=Array.from(args||[]);
-      if(m==='addTransaction'&&nextArgs[1]&&typeof nextArgs[1]==='object'){
+      const voiceText=String(window.__moneyflowActiveVoiceText||'');
+      if(m==='addTransaction'&&voiceText&&nextArgs[1]&&typeof nextArgs[1]==='object'){
         const payload=Object.assign({},nextArgs[1]);
-        if(isSalaryPayload(payload)){
-          const current=String(payload.accountId||'');
-          if(current&&current!==DAILY){remember(current)}
-          else{
-            const target=resolveSalaryAccount();
-            if(!target)throw new Error('ยังไม่พบบัญชีเงินเดือนที่กำหนด กรุณาเลือกบัญชีเงินเดือนในฟอร์ม 1 ครั้ง แล้ว MoneyFlow จะจำให้');
-            payload.accountId=target;
-          }
-          nextArgs[1]=payload;
+        if(voiceWantsSalary(voiceText,payload)){
+          const target=resolveSalaryAccount();
+          if(!target)throw new Error('ยังไม่พบบัญชีเงินเดือนที่กำหนด กรุณาเลือกบัญชีเงินเดือนในฟอร์ม 1 ครั้ง แล้ว MoneyFlow จะจำให้');
+          payload.accountId=target;remember(target);
+        }else{
+          payload.accountId=DAILY;
         }
+        nextArgs[1]=payload;
       }
       return previous(m,nextArgs);
     };
-    wrapped.__moneyflowVoiceAccountRouting=true;
+    wrapped.__moneyflowVoiceAccountRoutingV2=true;
     window.__moneyflowRpcTransport=wrapped;
   }
 })();
@@ -105,10 +105,4 @@ if (!html.includes('MONEYFLOW_VOICE_ACCOUNT_ROUTING_V1')) {
   await writeFile(indexPath, html);
 }
 
-try {
-  let sw = await readFile(swPath, 'utf8');
-  sw = sw.replace(/moneyflow-shell-v\d+/g, 'moneyflow-shell-v5');
-  await writeFile(swPath, sw);
-} catch {}
-
-console.log('Applied salary voice-account routing and bumped PWA shell cache');
+console.log('Constrained voice transaction routing to Daily Wallet and Salary account only');
