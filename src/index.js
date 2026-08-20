@@ -4,14 +4,41 @@ import { legacyRpc, setupApp } from './legacy-core.js';
 import { buildReportPdf } from './pdf.js';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
+const MAX_RPC_BODY_BYTES = 5 * 1024 * 1024;
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
 }
 
-function rpcError(error) {
+function rpcError(error, status = 400) {
   const message = error && error.message ? error.message : String(error || 'เกิดข้อผิดพลาด');
-  return json({ ok: false, error: { message } }, 400);
+  return json({ ok: false, error: { message } }, status);
+}
+
+function withSecurityHeaders(response) {
+  const headers = new Headers(response.headers);
+  headers.set('x-content-type-options', 'nosniff');
+  headers.set('x-frame-options', 'DENY');
+  headers.set('referrer-policy', 'same-origin');
+  headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+  headers.set('cross-origin-opener-policy', 'same-origin');
+  headers.set('strict-transport-security', 'max-age=31536000; includeSubDomains');
+  headers.set('content-security-policy', "frame-ancestors 'none'; base-uri 'self'; object-src 'none'");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
+
+function isSameOriginRequest(request) {
+  const origin = request.headers.get('origin');
+  if (!origin) return true;
+  try {
+    return origin === new URL(request.url).origin;
+  } catch {
+    return false;
+  }
 }
 
 async function ensureInitialized(ctx) {
@@ -51,8 +78,27 @@ async function serveReceipt(env, key) {
 }
 
 async function handleRpc(request, env) {
+  const contentType = String(request.headers.get('content-type') || '').toLowerCase();
+  if (!contentType.includes('application/json')) {
+    return rpcError(new Error('Content-Type ต้องเป็น application/json'), 415);
+  }
+
+  let text;
+  try {
+    text = await request.text();
+  } catch {
+    return rpcError(new Error('ไม่สามารถอ่าน request ได้'));
+  }
+  if (new TextEncoder().encode(text).byteLength > MAX_RPC_BODY_BYTES) {
+    return rpcError(new Error('request มีขนาดใหญ่เกินกำหนด'), 413);
+  }
+
   let body;
-  try { body = await request.json(); } catch { return rpcError(new Error('รูปแบบ request ไม่ถูกต้อง')); }
+  try {
+    body = JSON.parse(text);
+  } catch {
+    return rpcError(new Error('รูปแบบ request ไม่ถูกต้อง'));
+  }
   const method = String(body && body.method || '');
   const args = Array.isArray(body && body.args) ? body.args : [];
 
@@ -60,7 +106,7 @@ async function handleRpc(request, env) {
   try {
     ctx = await D1SheetContext.load(env.DB);
   } catch (e) {
-    return rpcError(new Error('ฐานข้อมูลยังไม่พร้อม กรุณารัน D1 migration ก่อน deploy: ' + (e.message || e)));
+    return rpcError(new Error('ฐานข้อมูลยังไม่พร้อม กรุณารัน D1 migration ก่อน deploy: ' + (e.message || e)), 503);
   }
 
   setRuntimeContext({ spreadsheet: ctx.spreadsheet });
@@ -124,12 +170,27 @@ async function handleRpc(request, env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname === '/health') return json({ ok: true, app: 'MoneyFlow', version: '6.2-cloudflare' });
-    if (url.pathname === '/api/rpc' && request.method === 'POST') return handleRpc(request, env);
-    if (url.pathname.startsWith('/receipts/') && request.method === 'GET') {
+    let response;
+
+    if (url.pathname === '/health') {
+      response = request.method === 'GET'
+        ? json({ ok: true, app: 'MoneyFlow', version: '6.2-cloudflare.2' })
+        : json({ ok: false, error: { message: 'Method not allowed' } }, 405);
+    } else if (url.pathname === '/api/rpc') {
+      if (request.method !== 'POST') {
+        response = json({ ok: false, error: { message: 'Method not allowed' } }, 405);
+      } else if (!isSameOriginRequest(request)) {
+        response = json({ ok: false, error: { message: 'Cross-origin request denied' } }, 403);
+      } else {
+        response = await handleRpc(request, env);
+      }
+    } else if (url.pathname.startsWith('/receipts/') && request.method === 'GET') {
       const key = decodeURIComponent(url.pathname.slice('/receipts/'.length));
-      return serveReceipt(env, key);
+      response = await serveReceipt(env, key);
+    } else {
+      response = await env.ASSETS.fetch(request);
     }
-    return env.ASSETS.fetch(request);
+
+    return withSecurityHeaders(response);
   }
 };
