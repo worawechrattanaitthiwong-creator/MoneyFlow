@@ -78,7 +78,7 @@ async function serveReceipt(env, key) {
 }
 
 const AUTH_SHEETS = ['Users', 'Sessions', 'DailyWallet'];
-const FINANCE_SHEETS = [...AUTH_SHEETS, 'FinanceSettings', 'CurrencyRates'];
+const FINANCE_SHEETS = [...AUTH_SHEETS, 'FinanceSettings', 'CurrencyRates', 'SavingsAccounts'];
 const RPC_SHEET_PLANS = Object.freeze({
   login: ['Users', 'Sessions', 'DailyWallet'],
   getInstantSessionData: AUTH_SHEETS,
@@ -89,7 +89,7 @@ const RPC_SHEET_PLANS = Object.freeze({
   getSavingsOverview: [...FINANCE_SHEETS, 'Accounts'],
   getTransactions: [...FINANCE_SHEETS, 'Transactions'],
   getBudgets: [...FINANCE_SHEETS, 'Transactions', 'Budgets'],
-  getGoals: [...AUTH_SHEETS, 'Accounts', 'Goals'],
+  getGoals: [...FINANCE_SHEETS, 'Accounts', 'Goals'],
   getCurrencyRates: FINANCE_SHEETS,
   getFinanceSettings: FINANCE_SHEETS,
   getCalendarData: [...FINANCE_SHEETS, 'Transactions', 'Recurring'],
@@ -99,13 +99,29 @@ const RPC_SHEET_PLANS = Object.freeze({
   getSavingsAccountDetail: [...FINANCE_SHEETS, 'Accounts', 'AccountLedger'],
   getSavingsSecurityStatus: [...AUTH_SHEETS, 'SavingsSecurity'],
   getSecurityCenterData: [...FINANCE_SHEETS, 'SavingsSecurity'],
-  getAccountingHealth: [...AUTH_SHEETS, 'Transactions', 'Accounts', 'AccountLedger', 'DailyWalletLedger'],
+  getAccountingHealth: [...FINANCE_SHEETS, 'Transactions', 'Accounts', 'AccountLedger', 'DailyWalletLedger'],
   exportTransactionsCsv: [...FINANCE_SHEETS, 'Transactions']
 });
 
 function sheetsForRpc(method) {
   const plan = RPC_SHEET_PLANS[String(method || '')];
   return Array.isArray(plan) ? plan : null;
+}
+
+async function resolveScopedUserId(db, method, args) {
+  const name = String(method || '');
+  if (name === 'login' || name === 'register') return null;
+  const token = Array.isArray(args) && typeof args[0] === 'string' ? String(args[0]) : '';
+  if (!token) return null;
+  try {
+    const row = await db
+      .prepare("SELECT json_extract(data,'$.userId') AS user_id FROM mf_sheet_rows WHERE sheet_name='Sessions' AND json_extract(data,'$.token')=? ORDER BY row_id DESC LIMIT 1")
+      .bind(token)
+      .first();
+    return row && row.user_id != null ? String(row.user_id) : null;
+  } catch {
+    return null;
+  }
 }
 
 async function handleRpc(request, env) {
@@ -135,7 +151,8 @@ async function handleRpc(request, env) {
 
   let ctx;
   try {
-    ctx = await D1SheetContext.load(env.DB, sheetsForRpc(method));
+    const scopedUserId = await resolveScopedUserId(env.DB, method, args);
+    ctx = await D1SheetContext.load(env.DB, sheetsForRpc(method), scopedUserId);
   } catch (e) {
     return rpcError(new Error('ฐานข้อมูลยังไม่พร้อม กรุณารัน D1 migration ก่อน deploy: ' + (e.message || e)), 503);
   }
