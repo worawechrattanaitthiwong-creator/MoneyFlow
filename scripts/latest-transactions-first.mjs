@@ -30,18 +30,12 @@ if (!html.includes('MONEYFLOW_LATEST_FIRST_V1')) {
     if(!row||typeof row!=='object')return 0;
     return parseDateLike(row.createdAt||row.created_at||row.updatedAt||row.updated_at||row.timestamp||row.datetime||row.time);
   }
-  function txIdRank(row){
-    const raw=row&&row.id!=null?String(row.id):'';
-    const num=Number(raw.replace(/\\D+/g,''));
-    return Number.isFinite(num)?num:0;
-  }
   function sortTransactionsLatest(rows){
     if(!Array.isArray(rows))return rows;
-    return rows.map((row,index)=>({row,index,primary:txPrimaryTime(row),secondary:txSecondaryTime(row),id:txIdRank(row)}))
+    return rows.map((row,index)=>({row,index,primary:txPrimaryTime(row),secondary:txSecondaryTime(row)}))
       .sort((a,b)=>{
         if(a.primary!==b.primary)return b.primary-a.primary;
         if(a.secondary!==b.secondary)return b.secondary-a.secondary;
-        if(a.id&&b.id&&a.id!==b.id)return b.id-a.id;
         return b.index-a.index;
       }).map(x=>x.row);
   }
