@@ -16,11 +16,15 @@ const requiredHtml = [
   'MONEYFLOW_PIN_INSTANT_V1',
   'MONEYFLOW_HELP_V1',
   'MONEYFLOW_VOICE_ENTRY_V1',
+  'MONEYFLOW_VOICE_ACCOUNT_ROUTING_V1',
   'MONEYFLOW_LATEST_FIRST_V1',
   'MONEYFLOW_SWIPE_DELETE_V1',
   '__moneyflowRpcTransport',
   '__moneyflowFlushQueue',
   '__moneyflowSortTransactionsLatest',
+  '__moneyflowResolveSalaryAccount',
+  'moneyflow_voice_salary_account_v1',
+  'ยังไม่พบบัญชีเงินเดือนที่กำหนด',
   'mfAccountingHealth',
   'MF_PENDING_DETAIL_ID',
   'mfUndoBar',
@@ -45,6 +49,9 @@ const requiredHtml = [
 for (const marker of requiredHtml) {
   if (!html.includes(marker)) throw new Error(`production polish marker missing: ${marker}`);
 }
+if (html.lastIndexOf('MONEYFLOW_VOICE_ACCOUNT_ROUTING_V1') < html.lastIndexOf('MONEYFLOW_VOICE_ENTRY_V1')) {
+  throw new Error('salary voice-account routing must load after voice entry runtime');
+}
 if (html.lastIndexOf('MONEYFLOW_SWIPE_DELETE_V1') < html.lastIndexOf('MONEYFLOW_PRODUCTION_POLISH_V1')) {
   throw new Error('swipe delete runtime must load after legacy undo-delete runtime');
 }
@@ -57,7 +64,7 @@ for (const marker of ["version: '6.2-cloudflare.4'", 'getAccountingHealth:']) {
 for (const marker of ['ensureOptimizationSchema', 'mf_transactions_native', 'idx_mf_rows_sheet_user_date']) {
   if (!store.includes(marker)) throw new Error(`D1 optimization marker missing: ${marker}`);
 }
-if (!sw.includes('moneyflow-shell-v4')) throw new Error('PWA cache version was not bumped for swipe-delete UI');
+if (!sw.includes('moneyflow-shell-v5')) throw new Error('PWA cache version was not bumped for salary voice-account routing');
 
 for (const file of ['manifest.webmanifest', 'sw.js', 'offline.html', 'icons/icon-192.png', 'icons/icon-512.png']) {
   await access(join(root, 'public', file));
