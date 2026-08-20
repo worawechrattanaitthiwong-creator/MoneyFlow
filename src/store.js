@@ -107,9 +107,19 @@ export class MemorySpreadsheet {
 export class D1SheetContext {
   constructor(db, spreadsheet) { this.db = db; this.spreadsheet = spreadsheet; }
 
-  static async load(db) {
+  static async load(db, sheetNames = null) {
     const metaResult = await db.prepare('SELECT sheet_name, headers FROM mf_sheet_meta ORDER BY sheet_name').all();
-    const rowResult = await db.prepare('SELECT row_id, sheet_name, sort_key, data FROM mf_sheet_rows ORDER BY sheet_name, sort_key, row_id').all();
+    let rowResult;
+    if (Array.isArray(sheetNames) && sheetNames.length) {
+      const names = [...new Set(sheetNames.map(String).filter(Boolean))];
+      const placeholders = names.map(() => '?').join(',');
+      rowResult = await db
+        .prepare(`SELECT row_id, sheet_name, sort_key, data FROM mf_sheet_rows WHERE sheet_name IN (${placeholders}) ORDER BY sheet_name, sort_key, row_id`)
+        .bind(...names)
+        .all();
+    } else {
+      rowResult = await db.prepare('SELECT row_id, sheet_name, sort_key, data FROM mf_sheet_rows ORDER BY sheet_name, sort_key, row_id').all();
+    }
     const map = new Map();
     for (const m of (metaResult.results || [])) {
       let headers = [];
