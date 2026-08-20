@@ -1,11 +1,13 @@
 import { readFile, access } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 import vm from 'node:vm';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const html = await readFile(join(root, 'public', 'index.html'), 'utf8');
-const worker = await readFile(join(root, 'src', 'index.js'), 'utf8');
+const workerPath = join(root, 'src', 'index.js');
+const worker = await readFile(workerPath, 'utf8');
 const sw = await readFile(join(root, 'public', 'sw.js'), 'utf8');
 const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 
@@ -74,6 +76,11 @@ const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)]
 for (let i = 0; i < scripts.length; i++) {
   try { new vm.Script(scripts[i], { filename: `ai-inline-${i}.js` }); }
   catch (error) { throw new Error(`Thai AI inline script ${i} syntax error: ${error.message}`); }
+}
+
+for (const path of [workerPath, join(root,'scripts','thai-ai-platform-worker-safe.mjs'), join(root,'scripts','thai-ai-product-ui.mjs')]) {
+  const checked = spawnSync(process.execPath, ['--check', path], { encoding: 'utf8' });
+  if (checked.status !== 0) throw new Error(`Node syntax check failed for ${path}: ${checked.stderr || checked.stdout}`);
 }
 
 console.log('Thai AI Personal Finance platform checks passed');
