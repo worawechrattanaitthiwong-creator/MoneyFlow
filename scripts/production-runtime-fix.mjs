@@ -70,6 +70,33 @@ if (!html.includes('MONEYFLOW_RUNTIME_FIX_V1')) {
     "google.script.run.withSuccessHandler((result)=>{CACHE.at.dashboard=0;CACHE.at.savings=0;CACHE.reports={};if(result&&result.offline)mfSetSync('offline','● รอซิงก์ '+mfQueue().length+' รายการ',true);else mfSetSync('saved','✓ ลบแล้ว');if(mfEl('page-dashboard')?.classList.contains('active')&&!(result&&result.offline))loadDashboard(true)})"
   );
 
+  const pinRuntime = `
+<script>
+/* MONEYFLOW_PIN_INSTANT_V1 */
+(function(){
+  window.openSavingsPinForReveal=function(){
+    try{
+      const loaded=!!(SAVINGS_PIN_STATUS&&SAVINGS_PIN_STATUS.loaded);
+      const hasPin=loaded?!!SAVINGS_PIN_STATUS.hasPin:true;
+      openSavingsPinModal(hasPin?'verify':'setup');
+      setTimeout(function(){const input=document.getElementById('savingsPinValue');if(input)input.focus();},0);
+      if(loaded)return;
+      google.script.run
+        .withSuccessHandler(function(status){
+          SAVINGS_PIN_STATUS={loaded:true,hasPin:!!(status&&status.hasPin)};
+          if(!SAVINGS_PIN_STATUS.hasPin)openSavingsPinModal('setup');
+          if(typeof saveLocalSnapshot==='function')saveLocalSnapshot();
+        })
+        .withFailureHandler(function(error){if(typeof serverError==='function')serverError(error);})
+        .getSavingsSecurityStatus(TOKEN);
+    }catch(error){
+      try{openSavingsPinModal('verify');}catch(e){}
+    }
+  };
+})();
+</script>`;
+  html = html.replace('</body>', pinRuntime + '\n</body>');
+
   await writeFile(indexPath, html);
 }
 
