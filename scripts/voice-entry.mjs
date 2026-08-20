@@ -170,6 +170,7 @@ if (!html.includes('MONEYFLOW_VOICE_ENTRY_V1')) {
   #mfVoiceButton.listening:before{content:'';position:absolute;inset:-9px;border:3px solid rgba(99,102,241,.30);border-radius:50%;animation:mfVoicePulse 1s ease-out infinite}
   #mfVoiceButton.canceling{background:linear-gradient(135deg,#ef4444,#f97316)}
   #mfVoiceButton.unsupported{filter:grayscale(.7);opacity:.72}
+  #mfVoiceButton.mf-v-hidden{display:none!important}
   #mfVoiceButton .mf-v-mic{pointer-events:none}
   #mfVoiceButton .mf-v-label{position:absolute;right:70px;white-space:nowrap;padding:7px 10px;border-radius:10px;background:rgba(15,23,42,.86);color:#fff;font-size:11px;font-weight:700;opacity:0;transform:translateX(6px);pointer-events:none;transition:.15s}
   #mfVoiceButton:hover .mf-v-label,#mfVoiceButton:focus-visible .mf-v-label{opacity:1;transform:none}
@@ -212,6 +213,8 @@ if (!html.includes('MONEYFLOW_VOICE_ENTRY_V1')) {
   const localDate=offset=>{const d=new Date();d.setDate(d.getDate()+Number(offset||0));const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+day};
 
   function toastSafe(message,type){try{if(typeof toast==='function')toast(message,type||'info')}catch(e){}}
+  function voiceLoggedIn(){try{return typeof TOKEN!=='undefined'&&!!String(TOKEN||'')}catch(e){return false}}
+  function updateVoiceVisibility(){const btn=byId('mfVoiceButton');if(!btn)return;const show=voiceLoggedIn();btn.classList.toggle('mf-v-hidden',!show);if(!show){byId('mfVoiceHud')?.classList.remove('show','cancel');byId('mfVoiceReview')?.classList.add('hidden')}}
   function ensureUi(){
     if(!byId('mfVoiceButton')){
       const btn=document.createElement('button');btn.id='mfVoiceButton';btn.type='button';btn.setAttribute('aria-label','กดค้างเพื่อบันทึกรายการด้วยเสียง');btn.innerHTML='<span class="mf-v-mic">🎤</span><span class="mf-v-label">กดค้างเพื่อพูด</span>';document.body.appendChild(btn);
@@ -223,6 +226,7 @@ if (!html.includes('MONEYFLOW_VOICE_ENTRY_V1')) {
       btn.addEventListener('click',e=>{e.preventDefault();if(Date.now()<state.ignoreClickUntil)return;if(!state.startedAt)toastSafe(Recognition?'กดค้างที่ไมค์ แล้วปล่อยเมื่อพูดเสร็จ':'อุปกรณ์/เบราว์เซอร์นี้ยังไม่รองรับการอ่านข้อความเสียง','info')});
       if(!Recognition)btn.classList.add('unsupported');
     }
+    updateVoiceVisibility();
     if(!byId('mfVoiceHud')){
       const hud=document.createElement('div');hud.id='mfVoiceHud';hud.innerHTML='<div class="mf-v-title"><span class="mf-v-dot"></span><span id="mfVoiceHudTitle">กำลังฟัง…</span></div><div id="mfVoiceHudText" class="mf-v-text">พูดได้เลย</div><div id="mfVoiceHudHint" class="mf-v-hint">ปล่อยนิ้วเพื่อประมวลผล • ลากออกจากปุ่มเพื่อยกเลิก</div>';document.body.appendChild(hud);
     }
@@ -417,9 +421,9 @@ if (!html.includes('MONEYFLOW_VOICE_ENTRY_V1')) {
   window.__moneyflowParseVoiceText=parseVoiceText;
   window.__moneyflowVoiceStart=()=>{ensureUi();toastSafe('กดค้างที่ปุ่ม 🎤 เพื่อเริ่มพูด','info')};
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.listening){state.canceled=true;abortRecognition()}});
-  addEventListener('blur',()=>{if(state.listening&&state.startedAt){state.canceled=true;abortRecognition()}});
-  document.addEventListener('DOMContentLoaded',ensureUi,{once:true});
-  if(document.readyState!=='loading')ensureUi();
+  document.addEventListener('DOMContentLoaded',()=>{ensureUi();updateVoiceVisibility()},{once:true});
+  setInterval(updateVoiceVisibility,900);
+  if(document.readyState!=='loading'){ensureUi();updateVoiceVisibility();}
 })();
 </script>`;
   html = html.replace('</body>', runtime + '\n</body>');
