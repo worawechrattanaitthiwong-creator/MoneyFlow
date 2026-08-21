@@ -23,13 +23,19 @@ const replacements = [
   ['กำลังเรียนรู้รูปแบบการเงิน', 'กำลังเรียนรู้จากรายการเดิม'],
   ['Auto Capture Inbox', 'Capture Inbox (วางข้อความเอง)'],
   ['Android Notification Auto Capture', 'Android Notification Capture (ยังไม่เปิด)'],
-  ["function modeName(mode){return ({personal:'Free',pro:'Pro',family:'Family',freelancer:'Freelancer'})[mode]||'Free'}", "function modeName(mode){return ({personal:'ส่วนตัว',pro:'ขั้นสูง',family:'ครอบครัว',freelancer:'ฟรีแลนซ์'})[mode]||'ส่วนตัว'}"],
+  ["function modeName(mode){return ({personal:'Free',pro:'Pro',family:'Family',freelancer:'Freelancer'})[mode]||'Free'}", "function modeName(mode){return ({personal:'ส่วนตัว',family:'ครอบครัว',freelancer:'ฟรีแลนซ์'})[mode]||'ส่วนตัว'}"],
   ["['personal','pro','family','freelancer']", "['personal','family','freelancer']"],
+  ['>Pro<', '>ฟรี<'],
+  ['.mf-ai-modes{display:grid;grid-template-columns:repeat(4,1fr);', '.mf-ai-modes{display:grid;grid-template-columns:repeat(3,1fr);'],
   ["b.textContent='✨';", "b.innerHTML='<span aria-hidden=\"true\">📊</span><span class=\"mf-smart-btn-label\">แผนการเงิน</span>';"],
   ['#mfAiHubButton{position:fixed;right:18px;bottom:calc(164px + env(safe-area-inset-bottom));z-index:100045;width:54px;height:54px;', '#mfAiHubButton{position:fixed;right:14px;bottom:calc(164px + env(safe-area-inset-bottom));z-index:100045;width:116px;height:54px;'],
   ['font-size:23px;display:flex;align-items:center;justify-content:center;cursor:pointer;', 'font-size:19px;display:flex;gap:7px;align-items:center;justify-content:center;cursor:pointer;']
 ];
 for (const [from, to] of replacements) html = html.split(from).join(to);
+
+// Final user-facing safety pass. Internal legacy identifiers may still use "ai" in variable/class names,
+// but no Pro selector or paid/external AI endpoint is allowed to survive into the generated UI.
+html = html.replace(/>\s*Pro\s*</g, '>ฟรี<');
 
 if (!html.includes('MONEYFLOW_FREE_SMART_FINANCE_V1')) {
   const extra = `
