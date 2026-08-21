@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
@@ -56,6 +57,8 @@ for (let i = 0; i < scripts.length; i++) {
   try { new vm.Script(scripts[i], { filename: `free-smart-inline-${i}.js` }); }
   catch (error) { throw new Error(`inline script ${i} syntax error: ${error.message}`); }
 }
-new vm.SourceTextModule(worker, { identifier: 'src/index.js' });
 
-console.log('Free Smart Finance checks passed: local rules/data only, no paid AI API');
+const syntax = spawnSync(process.execPath, ['--check', join(root, 'src', 'index.js')], { encoding: 'utf8' });
+if (syntax.status !== 0) throw new Error(`Worker syntax error: ${syntax.stderr || syntax.stdout || 'unknown error'}`);
+
+console.log('Free Smart Finance checks passed: local rules/data only, no paid external API');
