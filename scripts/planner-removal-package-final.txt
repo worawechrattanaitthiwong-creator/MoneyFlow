@@ -1,1 +1,0 @@
-The active build pipeline is being reduced to core MoneyFlow features only.
