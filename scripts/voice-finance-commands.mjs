@@ -54,7 +54,7 @@ if (!html.includes('MONEYFLOW_VOICE_SCOPE_LOCK_V1')) {
 
 try {
   let sw = await readFile(swPath, 'utf8');
-  sw = sw.replace(/moneyflow-shell-v\\d+/g, 'moneyflow-shell-v7');
+  sw = sw.replace(/moneyflow-shell-v\d+/g, 'moneyflow-shell-v7');
   await writeFile(swPath, sw);
 } catch {}
 
