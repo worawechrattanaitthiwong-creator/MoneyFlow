@@ -10,17 +10,19 @@ let html = await readFile(htmlPath, 'utf8');
 
 /* MONEYFLOW_FREE_SMART_FINANCE_V1
    User-facing product is intentionally rule-based/local-data only.
-   No OpenAI/LLM API, billing SDK, or paid AI service is required. */
+   No external model API, billing SDK, or paid analysis service is required. */
 
 const replacements = [
   ['THAI AI PERSONAL FINANCE · BETA FULL ACCESS', 'SMART PERSONAL FINANCE · ฟรี'],
   ['THAI AI PERSONAL FINANCE', 'SMART PERSONAL FINANCE'],
   ['MoneyFlow AI', 'MoneyFlow Smart Finance'],
-  ['เปิด MoneyFlow AI', 'เปิดแผนการเงินอัจฉริยะ'],
-  ['Rule + Learning AI', 'Rule + Learning'],
-  ['Smart Engine ใช้ข้อมูล MoneyFlow/D1 ของคุณ โดยยังไม่ต้องใช้ AI API เสียเงิน', 'คำนวณจากข้อมูล MoneyFlow/D1 ของคุณโดยตรง ไม่เรียก AI API ภายนอกและไม่มีค่า API เพิ่ม'],
+  ['เปิด MoneyFlow AI', 'เปิดแผนการเงิน'],
+  ['Rule + Learning AI', 'กฎ + เรียนรู้จากรายการเดิม'],
+  ['Smart Engine ใช้ข้อมูล MoneyFlow/D1 ของคุณ โดยยังไม่ต้องใช้ AI API เสียเงิน', 'คำนวณจากข้อมูล MoneyFlow/D1 ของคุณโดยตรง ไม่มีค่าบริการ API เพิ่ม'],
   ['กำลังวิเคราะห์ข้อมูลการเงินของคุณ…', 'กำลังคำนวณข้อมูลการเงินของคุณ…'],
   ['กำลังเรียนรู้รูปแบบการเงิน', 'กำลังเรียนรู้จากรายการเดิม'],
+  ['Auto Capture Inbox', 'Capture Inbox (วางข้อความเอง)'],
+  ['Android Notification Auto Capture', 'Android Notification Capture (ยังไม่เปิด)'],
   ["function modeName(mode){return ({personal:'Free',pro:'Pro',family:'Family',freelancer:'Freelancer'})[mode]||'Free'}", "function modeName(mode){return ({personal:'ส่วนตัว',pro:'ขั้นสูง',family:'ครอบครัว',freelancer:'ฟรีแลนซ์'})[mode]||'ส่วนตัว'}"],
   ["['personal','pro','family','freelancer']", "['personal','family','freelancer']"],
   ["b.textContent='✨';", "b.innerHTML='<span aria-hidden=\"true\">📊</span><span class=\"mf-smart-btn-label\">แผนการเงิน</span>';"],
@@ -39,7 +41,7 @@ if (!html.includes('MONEYFLOW_FREE_SMART_FINANCE_V1')) {
 <script>
 /* MONEYFLOW_FREE_SMART_FINANCE_V1 */
 (function(){
-  window.__moneyflowSmartFinanceCostMode='no_external_ai_api';
+  window.__moneyflowSmartFinanceCostMode='free_rule_based';
   function addFreeNote(){
     const content=document.getElementById('mfAiHubContent');
     if(!content||content.querySelector('.mf-free-note'))return;
@@ -47,7 +49,7 @@ if (!html.includes('MONEYFLOW_FREE_SMART_FINANCE_V1')) {
     if(!head)return;
     const note=document.createElement('div');
     note.className='mf-free-note';
-    note.textContent='เครื่องมือชุดนี้ใช้การคำนวณและกฎจากข้อมูลใน MoneyFlow เท่านั้น ไม่ใช้ OpenAI/LLM API และไม่มีค่า AI API เพิ่ม';
+    note.textContent='เครื่องมือชุดนี้คำนวณจากข้อมูลใน MoneyFlow และกฎภายในระบบเท่านั้น ไม่มีค่าบริการ API เพิ่ม';
     head.insertAdjacentElement('afterend',note);
   }
   const observer=new MutationObserver(addFreeNote);
@@ -72,4 +74,4 @@ try {
   await writeFile(workerPath, worker);
 } catch {}
 
-console.log('Applied free Smart Finance UX: no external AI API, visible mobile entry, no Pro mode');
+console.log('Applied free Smart Finance UX: rule-based, visible on mobile, no Pro mode');
